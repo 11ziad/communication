@@ -118,7 +118,7 @@ export default function VideoChat() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[95%] translate-y-3 md:translate-y-0 md:h-screen bg-gray-900 text-white relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-[99%] translate-y-3 md:translate-y-0 md:h-screen bg-gray-900 text-white relative overflow-hidden">
       <Toaster position="top-right" />
 
       {/* Remote video */}
@@ -135,7 +135,7 @@ export default function VideoChat() {
         muted
         autoPlay
         playsInline
-        className="absolute w-35 h-29 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black
+        className="absolute w-40 h-30 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black
                    top-4 right-2 md:right-13 md:bottom-20 md:top-auto md:left-auto"
       />
 
