@@ -1,14 +1,24 @@
 import React, { useEffect, useRef, useState } from "react";
 import Peer from "peerjs";
-import { Copy, Video, VideoOff, Mic, MicOff, Phone, Menu, X } from "lucide-react";
+import {
+  Copy,
+  Video,
+  VideoOff,
+  Mic,
+  MicOff,
+  Phone,
+  Menu,
+  X,
+} from "lucide-react";
 import toast, { Toaster } from "react-hot-toast";
+
 export default function VideoChat() {
   const [myId, setMyId] = useState("");
   const [remoteId, setRemoteId] = useState("");
   const [error, setError] = useState("");
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // في الكبير مفتوح
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const myVideo = useRef();
   const remoteVideo = useRef();
   const peerInstance = useRef();
@@ -20,77 +30,116 @@ export default function VideoChat() {
 
     peer.on("open", (id) => setMyId(id));
 
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true }).then((stream) => {
-      myStream.current = stream;
-      myVideo.current.srcObject = stream;
-      myVideo.current.play();
-    });
+    const getMedia = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: { echoCancellation: true, noiseSuppression: true },
+        });
+        myStream.current = stream;
+        if (myVideo.current) {
+          myVideo.current.srcObject = stream;
+          myVideo.current.play();
+        }
+      } catch (err) {
+        console.error("Error accessing media devices.", err);
+        setError("Cannot access camera/microphone.");
+      }
+    };
+
+    getMedia();
 
     peer.on("call", (call) => {
-      call.answer(myStream.current);
-      call.on("stream", (remoteStream) => {
-        remoteVideo.current.srcObject = remoteStream;
-        remoteVideo.current.play();
-      });
+      const answerCall = () => {
+        call.answer(myStream.current);
+        call.on("stream", (remoteStream) => {
+          if (remoteVideo.current) {
+            remoteVideo.current.srcObject = remoteStream;
+            remoteVideo.current.play();
+          }
+        });
+      };
+
+      if (myStream.current) {
+        answerCall();
+      } else {
+        getMedia().then(() => {
+          answerCall();
+        });
+      }
     });
   }, []);
 
   const startCall = () => {
     if (!remoteId.trim()) {
-      setError("Enter ID ");
+      setError("Enter ID");
       return;
     }
     setError("");
+    if (!myStream.current) {
+      toast.error("Your media is not ready yet!");
+      return;
+    }
     const call = peerInstance.current.call(remoteId, myStream.current);
     call.on("stream", (remoteStream) => {
-      remoteVideo.current.srcObject = remoteStream;
-      remoteVideo.current.play();
+      if (remoteVideo.current) {
+        remoteVideo.current.srcObject = remoteStream;
+        remoteVideo.current.play();
+      }
     });
   };
 
   const toggleCamera = () => {
+    if (!myStream.current) return;
     const videoTrack = myStream.current.getVideoTracks()[0];
     videoTrack.enabled = !videoTrack.enabled;
     setCameraOn(videoTrack.enabled);
   };
 
   const toggleMic = () => {
+    if (!myStream.current) return;
     const audioTrack = myStream.current.getAudioTracks()[0];
     audioTrack.enabled = !audioTrack.enabled;
     setMicOn(audioTrack.enabled);
   };
 
   const leaveCall = () => {
-    myStream.current.getTracks().forEach((track) => track.stop());
-    peerInstance.current.destroy();
+    if (myStream.current) {
+      myStream.current.getTracks().forEach((track) => track.stop());
+    }
+    if (peerInstance.current) {
+      peerInstance.current.destroy();
+    }
   };
 
   const copyId = () => {
-     navigator.clipboard.writeText(myId);
+    navigator.clipboard.writeText(myId);
     toast.success("Copied successfully!");
   };
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white relative overflow-hidden">
-         <Toaster position="top-right" />
-        {/* Remote control video (enlarged) */}
+      <Toaster position="top-right" />
+
+      {/* Remote video */}
       <video
         ref={remoteVideo}
         autoPlay
         playsInline
-        className="w-[95%] h-[90%] mx-auto object-cover bg-black rounded-lg shadow-lg"
+        className="md:w-[95%] md:h-[90%] w-[95%] h-[80%] mx-auto object-cover bg-black rounded-lg shadow-lg"
       />
 
-    {/* My video (little in the corner) */}
+      {/* My video */}
       <video
         ref={myVideo}
-         autoPlay
+        muted
+        autoPlay
         playsInline
-        className="absolute w-38 h-30 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black
+        className="absolute w-33 h-24 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black
                    top-4 right-2 md:right-6 md:bottom-20 md:top-auto md:left-auto"
       />
 
-            {/* buttons */}
+      {/* buttons */}
       <div className="absolute bottom-10 md:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 md:gap-4">
         <button
           onClick={toggleCamera}
@@ -112,59 +161,74 @@ export default function VideoChat() {
         </button>
       </div>
 
-        {/* Menu button for small screens */}
-        <button
+      {/* Menu button */}
+      <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="absolute top-4 left-4 md:hidden bg-gray-800 p-2 rounded-lg cursor-pointer"
       >
-        {sidebarOpen ? <X size={20} className=" cursor-pointer" /> : <Menu size={20} />}
+        {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
-
+      <div
+        className="absolute top-2 left-11 font-medium text-blue-300 text-[11px]  transition-transform duration-300
+                     w-64 md:w-72 p-4  md:rounded-lg md:top-1 md:left-12"
+        style={{ maxHeight: "fit-content" }}
+      >
+        BY : ZIAD MOSTAFA
+      </div>
       {/* Sidebar */}
       {sidebarOpen && (
         <div
-          className={`
-            absolute top-0 left-0 bg-gray-800 shadow-md transition-transform duration-300
-            w-64 md:w-72 p-4 rounded-b-lg md:rounded-lg md:top-4 md:left-4
-          `}
-          style={{ maxHeight: "fit-content" }}
+          className="absolute top-4 left-4 md:top-6 md:left-6 w-72 md:w-80 p-5 rounded-2xl
+             bg-gradient-to-br from-gray-900/80 via-gray-800/60 to-gray-900/80
+             backdrop-blur-lg shadow-2xl border border-gray-700/50 transition-transform duration-300"
+          style={{ maxHeight: "90vh" }}
         >
-          <div className="flex justify-between items-center mb-3">
-            <p className="text-sm font-semibold text-blue-300">TO KNOW YOU</p>
+          {/* Header */}
+          <div className="flex justify-between items-center mb-4">
+            <p className="text-sm font-bold text-blue-400 tracking-wider uppercase drop-shadow-md">
+              To Know You
+            </p>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="text-gray-400 hover:text-white"
+              className="text-gray-300 hover:text-white hover:scale-110 transition-transform"
             >
-              <X size={18} className=" cursor-pointer"/>
+              <X size={20} />
             </button>
           </div>
 
-          <div className="flex items-center justify-between bg-gray-700 px-2 py-1 rounded">
-            <span className="truncate">{myId}</span>
-            <button onClick={copyId} className="ml-2 hover:cursor-pointer">
+          {/* My ID Box */}
+          <div className="flex items-center justify-between bg-gray-800/60 px-3 py-2 rounded-xl border border-gray-600/50 mb-3 shadow-inner">
+            <span className="truncate text-white font-medium">{myId}</span>
+            <button
+              onClick={copyId}
+              className="ml-2 hover:text-blue-400 hover:scale-110 transition-transform"
+            >
               <Copy size={16} />
             </button>
           </div>
 
+          {/* Remote ID Input */}
           <input
             type="text"
-            placeholder="To contact enter your ID"
+            placeholder="Enter Your Friend's ID"
             value={remoteId}
             onChange={(e) => setRemoteId(e.target.value)}
-            className="w-full mt-3 px-2 py-1 rounded bg-gray-700 text-white"
+            className="w-full px-3 py-2 rounded-xl bg-gray-800/50 border border-gray-600/50 text-white
+               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-2"
           />
           {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
 
+          {/* Start Call Button */}
           <button
             onClick={startCall}
-            className="hover:cursor-pointer mt-3 w-full bg-blue-600 hover:bg-blue-500 py-1 rounded flex items-center justify-center gap-2"
+            className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold
+               flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-400/50 transition-all"
           >
-            start call <Phone size={16} />
+            Start Call <Phone size={16} />
           </button>
         </div>
       )}
 
-    {/* Show Sidebar button on large screens if locked */}
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
