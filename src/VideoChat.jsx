@@ -195,7 +195,7 @@ export default function VideoChat() {
       </div>
 
       {/* My video */}
-      <div className="absolute w-45 h-45 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black top-4 right-2 md:right-13 md:bottom-20 md:top-auto md:left-auto overflow-hidden">
+      <div className="absolute w-41 h-41 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black top-4 right-2 md:right-13 md:bottom-20 md:top-auto md:left-auto overflow-hidden">
         <video
           ref={myVideo}
           muted
