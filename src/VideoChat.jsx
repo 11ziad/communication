@@ -84,8 +84,7 @@ export default function VideoChat() {
     {/* My video (little in the corner) */}
       <video
         ref={myVideo}
-        muted
-        autoPlay
+         autoPlay
         playsInline
         className="absolute w-38 h-30 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black
                    top-4 right-2 md:right-6 md:bottom-20 md:top-auto md:left-auto"
