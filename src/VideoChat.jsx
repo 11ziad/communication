@@ -143,21 +143,21 @@ export default function VideoChat() {
       <div className="absolute bottom-10 md:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 md:gap-4">
         <button
           onClick={toggleCamera}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600"
+          className="w-14 h-14 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600"
         >
-          {cameraOn ? <Video size={18} /> : <VideoOff size={18} />}
+          {cameraOn ? <Video size={23} /> : <VideoOff size={23} />}
         </button>
         <button
           onClick={toggleMic}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600"
+          className="w-14 h-14 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600"
         >
-          {micOn ? <Mic size={18} /> : <MicOff size={18} />}
+          {micOn ? <Mic size={23} /> : <MicOff size={23} />}
         </button>
         <button
           onClick={leaveCall}
-          className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500"
+          className="w-14 h-14 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-500"
         >
-          <Phone size={18} />
+          <Phone size={23} />
         </button>
       </div>
 
