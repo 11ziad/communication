@@ -73,7 +73,7 @@ export default function VideoChat() {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-900 text-white relative overflow-hidden">
          <Toaster position="top-right" />
-      {/* فيديو الريموت (مكبر) */}
+        {/* Remote control video (enlarged) */}
       <video
         ref={remoteVideo}
         autoPlay
@@ -81,7 +81,7 @@ export default function VideoChat() {
         className="w-[95%] h-[90%] mx-auto object-cover bg-black rounded-lg shadow-lg"
       />
 
-      {/* فيديوي أنا (صغير في الركن) */}
+    {/* My video (little in the corner) */}
       <video
         ref={myVideo}
         muted
@@ -91,7 +91,7 @@ export default function VideoChat() {
                    top-4 right-2 md:right-6 md:bottom-20 md:top-auto md:left-auto"
       />
 
-      {/* الأزرار */}
+            {/* buttons */}
       <div className="absolute bottom-10 md:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 md:gap-4">
         <button
           onClick={toggleCamera}
@@ -113,8 +113,8 @@ export default function VideoChat() {
         </button>
       </div>
 
-      {/* زرار منيو للشاشات الصغيرة */}
-      <button
+        {/* Menu button for small screens */}
+        <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="absolute top-4 left-4 md:hidden bg-gray-800 p-2 rounded-lg cursor-pointer"
       >
@@ -165,7 +165,7 @@ export default function VideoChat() {
         </div>
       )}
 
-      {/* زر إظهار الـ Sidebar في الشاشات الكبيرة لو مقفول */}
+    {/* Show Sidebar button on large screens if locked */}
       {!sidebarOpen && (
         <button
           onClick={() => setSidebarOpen(true)}
