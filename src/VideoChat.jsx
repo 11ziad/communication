@@ -118,7 +118,7 @@ export default function VideoChat() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-[92%] translate-y-5 md:translate-y-0 md:h-screen bg-gray-900 text-white relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-[95%] translate-y-3 md:translate-y-0 md:h-screen bg-gray-900 text-white relative overflow-hidden">
       <Toaster position="top-right" />
 
       {/* Remote video */}
