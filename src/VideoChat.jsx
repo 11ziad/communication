@@ -18,11 +18,19 @@ export default function VideoChat() {
   const [error, setError] = useState("");
   const [cameraOn, setCameraOn] = useState(true);
   const [micOn, setMicOn] = useState(true);
+  const [remoteCameraOn, setRemoteCameraOn] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
   const myVideo = useRef();
   const remoteVideo = useRef();
   const peerInstance = useRef();
   const myStream = useRef();
+  const dataConnection = useRef();
+
+  // صوت دخول جاهز عبر رابط صغير
+  const joinSound = useRef(
+    new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg")
+  );
 
   useEffect(() => {
     const peer = new Peer();
@@ -39,7 +47,7 @@ export default function VideoChat() {
         myStream.current = stream;
         if (myVideo.current) {
           myVideo.current.srcObject = stream;
-          myVideo.current.play();
+          myVideo.current.play().catch(() => {});
         }
       } catch (err) {
         console.error("Error accessing media devices.", err);
@@ -55,18 +63,25 @@ export default function VideoChat() {
         call.on("stream", (remoteStream) => {
           if (remoteVideo.current) {
             remoteVideo.current.srcObject = remoteStream;
-            remoteVideo.current.play();
+            remoteVideo.current.play().catch(() => {});
           }
         });
       };
+      if (myStream.current) answerCall();
+      else getMedia().then(answerCall);
+    });
 
-      if (myStream.current) {
-        answerCall();
-      } else {
-        getMedia().then(() => {
-          answerCall();
-        });
-      }
+    peer.on("connection", (conn) => {
+      dataConnection.current = conn;
+      conn.on("data", (data) => {
+        if (data.type === "camera") {
+          setRemoteCameraOn(data.enabled);
+        }
+        if (data.type === "joined") {
+          joinSound.current.play().catch(() => {});
+          toast(`🎉 ${conn.peer} has joined!`, { icon: "🎥" });
+        }
+      });
     });
   }, []);
 
@@ -80,11 +95,29 @@ export default function VideoChat() {
       toast.error("Your media is not ready yet!");
       return;
     }
+
+    const conn = peerInstance.current.connect(remoteId);
+    dataConnection.current = conn;
+
+    conn.on("open", () => {
+      conn.send({ type: "joined" });
+      joinSound.current.play().catch(() => {});
+      toast(`🎉 You joined with ${remoteId}!`, { icon: "🎥" });
+    });
+
+    conn.on("data", (data) => {
+      if (data.type === "camera") setRemoteCameraOn(data.enabled);
+      if (data.type === "joined") {
+        joinSound.current.play().catch(() => {});
+        toast(`${remoteId} has joined!`, { icon: "🎥" });
+      }
+    });
+
     const call = peerInstance.current.call(remoteId, myStream.current);
     call.on("stream", (remoteStream) => {
       if (remoteVideo.current) {
         remoteVideo.current.srcObject = remoteStream;
-        remoteVideo.current.play();
+        remoteVideo.current.play().catch(() => {});
       }
     });
   };
@@ -92,8 +125,14 @@ export default function VideoChat() {
   const toggleCamera = () => {
     if (!myStream.current) return;
     const videoTrack = myStream.current.getVideoTracks()[0];
+    if (!videoTrack) return;
+
     videoTrack.enabled = !videoTrack.enabled;
     setCameraOn(videoTrack.enabled);
+
+    if (dataConnection.current && dataConnection.current.open) {
+      dataConnection.current.send({ type: "camera", enabled: videoTrack.enabled });
+    }
   };
 
   const toggleMic = () => {
@@ -104,12 +143,31 @@ export default function VideoChat() {
   };
 
   const leaveCall = () => {
+    // STOP VIDIO
     if (myStream.current) {
-      myStream.current.getTracks().forEach((track) => track.stop());
+      myStream.current.getTracks().forEach((t) => t.stop());
+      myStream.current = null;
     }
-    if (peerInstance.current) {
+
+     if (peerInstance.current) {
       peerInstance.current.destroy();
+      peerInstance.current = null;
     }
+
+    // DELETE VEDIO
+    if (myVideo.current) myVideo.current.srcObject = null;
+    if (remoteVideo.current) remoteVideo.current.srcObject = null;
+
+    if (dataConnection.current) {
+      dataConnection.current.close();
+      dataConnection.current = null;
+    }
+
+    setCameraOn(true);
+    setMicOn(true);
+    setRemoteCameraOn(true);
+    setRemoteId("");
+    setError("");
   };
 
   const copyId = () => {
@@ -122,24 +180,37 @@ export default function VideoChat() {
       <Toaster position="top-right" />
 
       {/* Remote video */}
-      <video
-        ref={remoteVideo}
-        autoPlay
-        playsInline
-        className="md:w-[95%] md:h-[90%] w-[95%] h-[80%] mx-auto object-cover bg-black rounded-lg shadow-lg"
-      />
+      <div className="relative md:w-[95%] md:h-[90%] w-[95%] h-[80%] mx-auto rounded-lg shadow-lg overflow-hidden bg-black">
+        <video
+          ref={remoteVideo}
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
+        {!remoteCameraOn && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60">
+            <VideoOff size={60} className="text-gray-300" />
+          </div>
+        )}
+      </div>
 
       {/* My video */}
-      <video
-        ref={myVideo}
-        muted
-        autoPlay
-        playsInline
-        className="absolute w-45 h-45 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black
-                   top-4 right-2 md:right-13 md:bottom-20 md:top-auto md:left-auto"
-      />
+      <div className="absolute w-45 h-45 md:w-60 md:h-44 rounded-lg shadow-lg border border-gray-700 bg-black top-4 right-2 md:right-13 md:bottom-20 md:top-auto md:left-auto overflow-hidden">
+        <video
+          ref={myVideo}
+          muted
+          autoPlay
+          playsInline
+          className="w-full h-full object-cover"
+        />
+        {!cameraOn && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60">
+            <VideoOff size={30} className="text-gray-300" />
+          </div>
+        )}
+      </div>
 
-      {/* buttons */}
+      {/* Buttons */}
       <div className="absolute bottom-10 md:bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 md:gap-4">
         <button
           onClick={toggleCamera}
@@ -161,29 +232,24 @@ export default function VideoChat() {
         </button>
       </div>
 
-      {/* Menu button */}
+      {/* Sidebar */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
         className="absolute top-4 left-4 md:hidden bg-gray-800 p-2 rounded-lg cursor-pointer"
       >
         {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
-      <div
-        className="absolute top-2 left-11 font-medium text-blue-300 text-[11px]  transition-transform duration-300
-                     w-64 md:w-72 p-4  md:rounded-lg md:top-1 md:left-12"
-        style={{ maxHeight: "fit-content" }}
-      >
+
+      <div className="absolute top-5 text-blue-300 left-14 text-[13px] md:top-2 md:left-15 w-72 md:w-80 p-1 transition-transform duration-300">
         BY : ZIAD MOSTAFA
       </div>
-      {/* Sidebar */}
+
       {sidebarOpen && (
         <div
           className="absolute top-4 left-4 md:top-6 md:left-6 w-72 md:w-80 p-5 rounded-2xl
-             bg-gradient-to-br from-gray-900/80 via-gray-800/60 to-gray-900/80
-             backdrop-blur-lg shadow-2xl border border-gray-700/50 transition-transform duration-300"
-          style={{ maxHeight: "90vh" }}
+           bg-gradient-to-br from-gray-900/80 via-gray-800/60 to-gray-900/80
+           backdrop-blur-lg shadow-2xl border border-gray-700/50 transition-transform duration-300"
         >
-          {/* Header */}
           <div className="flex justify-between items-center mb-4">
             <p className="text-sm font-bold text-blue-400 tracking-wider uppercase drop-shadow-md">
               To Know You
@@ -196,7 +262,6 @@ export default function VideoChat() {
             </button>
           </div>
 
-          {/* My ID Box */}
           <div className="flex items-center justify-between bg-gray-800/60 px-3 py-2 rounded-xl border border-gray-600/50 mb-3 shadow-inner">
             <span className="truncate text-white font-medium">{myId}</span>
             <button
@@ -207,7 +272,6 @@ export default function VideoChat() {
             </button>
           </div>
 
-          {/* Remote ID Input */}
           <input
             type="text"
             placeholder="Enter Your Friend's ID"
@@ -218,7 +282,6 @@ export default function VideoChat() {
           />
           {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
 
-          {/* Start Call Button */}
           <button
             onClick={startCall}
             className="w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold
